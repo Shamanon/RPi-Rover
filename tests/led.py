@@ -1,3 +1,5 @@
+#!/usr/bin/python3
+
 from gpiozero import LED
 from time import sleep
 
