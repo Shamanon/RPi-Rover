@@ -17,5 +17,7 @@ led4 = LED(19)
 #    sleep(1)
 
 led3.on()
+sleep(10)
+led3.off()
 led4.on()
 sleep(10)
