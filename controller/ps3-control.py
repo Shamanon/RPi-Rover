@@ -1,49 +1,39 @@
-#!/usr/bin/env python
+#!/usr/bin/python3
 # coding: utf-8
+
+## control pan and tilt of head with controlller
 
 # Load the gamepad and time libraries
 import Gamepad
 import time
+from adafruit_servokit import ServoKit
+from gpiozero import TonalBuzzer, LED
+from gpiozero.tones import Tone
 
-# Make our own custom gamepad
-# The numbers can be figured out by running the Gamepad script:
-# ./Gamepad.py
-# Press ENTER without typing a name to get raw numbers for each
-# button press or axis movement, press CTRL+C when done
-class CustomGamepad(Gamepad.Gamepad):
-    def __init__(self, joystickNumber = 0):
-        Gamepad.Gamepad.__init__(self, joystickNumber)
-        self.axisNames = {
-            0: 'LEFT-X',
-            1: 'LEFT-Y',
-            2: 'RIGHT-Y',
-            3: 'RIGHT-X',
-            4: 'DPAD-X',
-            5: 'DPAD-Y'
-        }
-        self.buttonNames = {
-            0:  '1',
-            1:  '2',
-            2:  '3',
-            3:  '4',
-            4:  'L1',
-            5:  'L2',
-            6:  'R1',
-            7:  'R2',
-            8:  'SELECT',
-            9:  'START',
-            10: 'L3',
-            11: 'R3'
-        }
-        self._setupReverseMaps()
+# GPIO Zero settings
+b = TonalBuzzer(20)
+led = LED(26)
+
+# init the servo connection
+kit = ServoKit(channels=16)
+
+x = 15
+y = 14
+
+xLoc = 90
+yLoc = 120
+
+kit.servo[x].angle = xLoc
+kit.servo[y].angle = yLoc
 
 # Gamepad settings
-gamepadType = CustomGamepad
-buttonHappy = '3'
-buttonBeep = 'L3'
-buttonExit = 'START'
-joystickSpeed = 'LEFT-Y'
+gamepadType = Gamepad.PS3
+buttonHappy = 'CROSS'
+buttonBeep = 'CIRCLE'
+buttonExit = 'PS'
+joystickSpeed = 'RIGHT-Y'
 joystickSteering = 'RIGHT-X'
+pollInterval = 0.2
 
 # Wait for a connection
 if not Gamepad.available():
@@ -54,38 +44,73 @@ gamepad = gamepadType()
 print('Gamepad connected')
 
 # Set some initial state
+global running
+global beepOn
+global speed
+global steering
+running = True
+beepOn = False
 speed = 0.0
 steering = 0.0
 
-# Handle joystick updates one at a time
-while gamepad.isConnected():
-    # Wait for the next event
-    eventType, control, value = gamepad.getNextEvent()
+# Create some callback functions
+def happyButtonPressed():
+    led.on()
 
-    # Determine the type
-    if eventType == 'BUTTON':
-        # Button changed
-        if control == buttonHappy:
-            # Happy button (event on press and release)
-            if value:
-                print(':)')
-            else:
-                print(':(')
-        elif control == buttonBeep:
-            # Beep button (event on press)
-            if value:
-                print('BEEP')
-        elif control == buttonExit:
-            # Exit button (event on press)
-            if value:
-                print('EXIT')
-                break
-    elif eventType == 'AXIS':
-        # Joystick changed
-        if control == joystickSpeed:
-            # Speed control (inverted)
-            speed = -value
-        elif control == joystickSteering:
-            # Steering control (not inverted)
-            steering = value
+def happyButtonReleased():
+    led.off()
+
+def beepButtonChanged(isPressed):
+    global beepOn
+    beepOn = isPressed
+
+def exitButtonPressed():
+    global running
+    print('EXIT')
+    running = False
+
+def speedAxisMoved(position):
+    global speed
+    speed = -position   # Inverted
+
+def steeringAxisMoved(position):
+    global steering
+    steering = position # Non-inverted
+
+
+# Start the background updating
+gamepad.startBackgroundUpdates()
+
+# Register the callback functions
+gamepad.addButtonPressedHandler(buttonHappy, happyButtonPressed)
+gamepad.addButtonReleasedHandler(buttonHappy, happyButtonReleased)
+gamepad.addButtonChangedHandler(buttonBeep, beepButtonChanged)
+gamepad.addButtonPressedHandler(buttonExit, exitButtonPressed)
+gamepad.addAxisMovedHandler(joystickSpeed, speedAxisMoved)
+gamepad.addAxisMovedHandler(joystickSteering, steeringAxisMoved)
+
+# Keep running while joystick updates are handled by the callbacks
+try:
+    while running and gamepad.isConnected():
+        # Show the current speed and steering
         print('%+.1f %% speed, %+.1f %% steering' % (speed * 100, steering * 100))
+        
+        #move the head
+        yLoc = round(120 + (30 * speed))
+        xLoc = round(90 + (90 * steering))
+        kit.servo[x].angle = xLoc
+        kit.servo[y].angle = yLoc
+        
+
+        # Display the beep if held
+        if beepOn:
+            for i in range(60,70):
+                b.play(Tone(midi=float(i))) # frequency
+                time.sleep(.1)
+            b.stop()
+
+        # Sleep for our polling interval
+        time.sleep(pollInterval)
+finally:
+    # Ensure the background thread is always terminated when we are done
+    gamepad.disconnect()
