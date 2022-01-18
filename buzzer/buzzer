@@ -25,6 +25,10 @@ parser.add_argument('-n', metavar='MAX_NOTES', type=int,
                     default=0,
                     help='max number of notes to play')
 
+parser.add_argument('-t', metavar='TEMPO', type=int,
+                    default=1000,
+                    help='time devisor, default 1000')
+
 args = parser.parse_args()
 
 # look in the tones folder for imports
@@ -57,6 +61,7 @@ for i in range(args.s, args.s + notes):
 			b.play(Tone(midi=music.melody[i])) 
 		else:
 			b.play(Tone(music.melody[i])) 
-	sleep(music.beats[i]/1000) # wait correct timing
+	sleep(music.beats[i]/args.t) # sleep creates timing
 	b.stop()
 
+exit(0)
