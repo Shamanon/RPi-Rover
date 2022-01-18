@@ -1,0 +1,62 @@
+#!/usr/bin/env python3
+# takes an array of midi notes and beats from a file in 'tones'
+# and plays them on the tonal buzzer 
+# useage: buzzer [filename] (-s START_NOTE) (-n MAX_NOTES)
+# 2022 Joshua Besneatte https://piratesinteepees.org
+# Freeware
+
+from gpiozero import TonalBuzzer
+from gpiozero.tones import Tone
+from time import sleep
+import argparse
+import sys
+import signal
+import os.path
+
+parser = argparse.ArgumentParser(description='Specify input file.')
+parser.add_argument('filename', metavar='FILE', type=str,
+                    help='input file')
+
+parser.add_argument('-s', metavar='START_NOTE', type=int,
+                    default=0, 
+                    help='note number to start at')
+
+parser.add_argument('-n', metavar='MAX_NOTES', type=int,
+                    default=0,
+                    help='max number of notes to play')
+
+args = parser.parse_args()
+
+# look in the tones folder for imports
+sys.path.append('tones')
+
+if(os.path.exists('tones/'+args.filename+'.py')):
+	music = __import__(args.filename)
+else:
+	print("File tones/"+args.filename+".py not found. Exiting.")
+	exit(0)
+
+if(args.n > 0):
+	notes = args.n
+else:
+	notes = len(music.melody) - args.s
+
+b = TonalBuzzer(20,octaves=3)
+
+#This will capture exit when using Ctrl-C
+def handle_ctrl_c(signal, frame):
+	print('\b\bGoodbye.')
+	sys.exit(130)
+ 
+signal.signal(signal.SIGINT, handle_ctrl_c)
+
+for i in range(args.s, args.s + notes):
+	if(music.melody[i] != 'R'):
+		# play midi note
+		if isinstance(music.melody[i], int):
+			b.play(Tone(midi=music.melody[i])) 
+		else:
+			b.play(Tone(music.melody[i])) 
+	sleep(music.beats[i]/1000) # wait correct timing
+	b.stop()
+
