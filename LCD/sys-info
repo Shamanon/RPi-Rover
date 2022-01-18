@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# Display battery, cpu, mem, wifi, time, date on LCD
+# Display battery, cpu, mem, disk, time and date on LCD
 # 2022 by Joshua Besneatte https://piratesinteepees.org
 # Freeware
 
@@ -61,7 +61,7 @@ def sysinfo():
     
 def voltage():
     volt = round((pot.voltage+pot.voltage+pot.voltage)/3, 4)
-    V = round(volt/0.2)
+    V = round(volt/0.2, 1)
     if float(V)>9.9: 
         ledG.on()
         ledR.off()
@@ -70,11 +70,16 @@ def voltage():
         ledG.off()
     #write to LCD
     lcd.write_string(str(V) + 'V')
+
+# 2 letter month abbreviations
+month_code = ['JA', 'FE', 'MR', 'AL', 'MA', 'JN', 'JL', 'AU', 'SE', 'OC', 'NO', 'DE']
     
 #main loop
 while 1:
     #Write time/date to LCD
-    d = time.strftime('%H:%M %m/%d  ')
+    m = int(time.strftime('%m')) - 1
+    month = month_code[m]
+    d = time.strftime('%H:%M '+month+'%d ')
     lcd.write_string(d)
     #Write voltage to LCD
     voltage()
