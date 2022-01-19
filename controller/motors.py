@@ -4,8 +4,9 @@
 from gpiozero import Motor
 import Gamepad
 from time import sleep
+from numpy import clip
 
-debug = False
+debug = True
 
 # motor settings
 motorR = Motor(17, 27)
@@ -59,35 +60,22 @@ gamepad.addAxisMovedHandler(joystickSteering, steeringAxisMoved)
 # Keep running while joystick updates are handled by the callbacks
 try:
 	while running and gamepad.isConnected():
-		# Show the current speed and steering
-		if(debug): print('%+.1f %% speed, %+.1f %% steering' % (speed, steering))
 		
-		if(steering > 0 and speed > 0 or steering < 0 and speed < 0):
-			r = speed - steering
-			l = speed
-		elif(steering < 0 and speed > 0 or speed < 0 and steering > 0):
-			r = speed
-			l = speed + steering
-		elif(speed == 0):
-			r = steering * -1
-			l = steering
-		else: 
-			r = speed
-			l = speed	
+		# set individual track speed according to steering
+		r = clip(speed-steering,-1,1)
+		l = clip(speed+steering,-1,1)
+	
+		# Show the current speed and steering
+		if(debug): print('%+.0f %% sp | %+.0f %% st' % (speed*100, steering*100))
+		if(debug): print("L:"+str(l)+" R:"+str(r))
 
-		if(l > 0):
-			motorL.forward(l)
-		elif(l < 0):
-			motorL.backward(l * -1)
-		else:
-			motorL.stop()
+		if(l > 0): motorL.forward(l)
+		elif(l < 0): motorL.backward(l * -1)
+		else: motorL.stop()
 
-		if(r > 0):
-			motorR.forward(r)
-		elif(r < 0):
-			motorR.backward(r * -1)
-		else:
-			motorR.stop()
+		if(r > 0): motorR.forward(r)
+		elif(r < 0): motorR.backward(r * -1)
+		else: motorR.stop()
 
 
 
