@@ -38,8 +38,9 @@ lcd.close(clear=True)
 
 #This will capture exit when using Ctrl-C
 def handle_ctrl_c(signal, frame):
-	print('\b\bGoodbye.')
-	sys.exit(130)
+	pot.close()
+	lcd.close(clear=True)
+	sys.exit(0)
  
 signal.signal(signal.SIGINT, handle_ctrl_c)
 
@@ -70,6 +71,7 @@ def voltage():
         ledG.off()
     #write to LCD
     lcd.write_string(str(V) + 'V')
+    
 
 # 2 letter month abbreviations
 month_code = ['JA', 'FE', 'MR', 'AL', 'MA', 'JN', 'JL', 'AU', 'SE', 'OC', 'NO', 'DE']

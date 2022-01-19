@@ -13,6 +13,8 @@ import sys
 import signal
 import os.path
 
+tones_folder = '/robot/etc/tones/'
+
 parser = argparse.ArgumentParser(description='Specify input file.')
 parser.add_argument('filename', metavar='FILE', type=str,
                     help='input file')
@@ -29,15 +31,19 @@ parser.add_argument('-t', metavar='TEMPO', type=int,
                     default=1000,
                     help='time devisor, default 1000')
 
+parser.add_argument('-f', metavar='TONES_FOLDER', type=str,
+                    default=tones_folder,
+                    help='path to tone folder')
+
 args = parser.parse_args()
 
 # look in the tones folder for imports
-sys.path.append('tones')
+sys.path.append(args.f)
 
-if(os.path.exists('tones/'+args.filename+'.py')):
+if(os.path.exists(args.f+args.filename+'.py')):
 	music = __import__(args.filename)
 else:
-	print("File tones/"+args.filename+".py not found. Exiting.")
+	print("File "+args.f+args.filename+".py not found. Exiting.")
 	exit(0)
 
 if(args.n > 0):
