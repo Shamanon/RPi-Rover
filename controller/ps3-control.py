@@ -7,8 +7,7 @@
 import Gamepad
 import time
 from adafruit_servokit import ServoKit
-from gpiozero import TonalBuzzer, LED
-from gpiozero.tones import Tone
+from gpiozero import TonalBuzzer, LED, Tone
 
 # GPIO Zero settings
 b = TonalBuzzer(20)
