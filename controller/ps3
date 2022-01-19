@@ -1,22 +1,36 @@
 #!/usr/bin/python3
-# test motor controller
+# Control Motors and Servos with PS3 controller
 
 from gpiozero import Motor
 import Gamepad
 from time import sleep
-from numpy import clip
+from numpy import clip, invert
+from adafruit_servokit import ServoKit
+from gpiozero import LED
+import signal, sys
 
-debug = True
+debug = False
 
 # motor settings
 motorR = Motor(17, 27)
 motorL = Motor(24, 23)
 
+# GPIO Zero settings
+led = LED(26)
+
+# init the servo connection
+kit = ServoKit(channels=16)
+sx = 15
+sy = 14
+
 # Gamepad settings
 gamepadType = Gamepad.PS3
-buttonExit = 'CROSS'
+buttonExit = 'START'
 joystickSpeed = 'LEFT-Y'
 joystickSteering = 'LEFT-X'
+headlightToggle = 'CIRCLE'
+servoY = 'RIGHT-Y'
+servoX = 'RIGHT-X'
 pollInterval = 0.3
 
 # Wait for a connection
@@ -31,16 +45,39 @@ print('Gamepad connected')
 global running
 global speed
 global steering
+global servoXpos
+global servoYpos
+global headlight
 running = True
 speed = 0.0
 steering = 0.0
+servoXpos = 90
+servoYpos = 120
+headlight = False
+
+# center head servos
+kit.servo[sx].angle = servoXpos
+kit.servo[sy].angle = servoYpos
+
+#This will capture exit when using Ctrl-C
+def handle_ctrl_c(signal, frame):
+	global running
+	running = False
+	print("\b\bPress any controller button to exit.")
+ 
+signal.signal(signal.SIGINT, handle_ctrl_c)
 
 # functions to put stick values in variables
 def exitButtonPressed():
     global running
-    print('EXIT')
     running = False
-
+    
+def headlightTogglePressed():
+	global headlight
+	headlight = invert(headlight)
+	if(headlight): led.on()
+	else: led.off()
+    
 def speedAxisMoved(position):
     global speed
     speed = -position   # Inverted
@@ -49,13 +86,24 @@ def steeringAxisMoved(position):
     global steering
     steering = position # Non-inverted
 
+def XservoMoved(position):
+    global servoXpos
+    servoXpos = round(90 + (90 * -position))   # Inverted
+
+def YservoMoved(position):
+    global servoYpos
+    servoYpos = round(120 + (30 * -position)) # Inverted
+
 # Start the background updating
 gamepad.startBackgroundUpdates()
 
 # Register the callback functions
 gamepad.addButtonPressedHandler(buttonExit, exitButtonPressed)
+gamepad.addButtonPressedHandler(headlightToggle, headlightTogglePressed)
 gamepad.addAxisMovedHandler(joystickSpeed, speedAxisMoved)
 gamepad.addAxisMovedHandler(joystickSteering, steeringAxisMoved)
+gamepad.addAxisMovedHandler(servoX, XservoMoved)
+gamepad.addAxisMovedHandler(servoY, YservoMoved)
 
 # Keep running while joystick updates are handled by the callbacks
 try:
@@ -64,7 +112,7 @@ try:
 		# set individual track speed according to steering
 		r = clip(speed-steering,-1,1)
 		l = clip(speed+steering,-1,1)
-	
+
 		# Show the current speed and steering
 		if(debug): print('%+.0f %% sp | %+.0f %% st' % (speed*100, steering*100))
 		if(debug): print("L:"+str(l)+" R:"+str(r))
@@ -77,6 +125,10 @@ try:
 		elif(r < 0): motorR.backward(r * -1)
 		else: motorR.stop()
 
+		#move the head
+		if(debug): print("X:"+str(servoXpos)+" Y:"+str(servoYpos))
+		kit.servo[sx].angle = servoXpos
+		kit.servo[sy].angle = servoYpos
 
 
 		# Sleep for our polling interval
@@ -84,3 +136,5 @@ try:
 finally:
     # Ensure the background thread is always terminated when we are done
     gamepad.disconnect()
+    sys.exit(0)
+

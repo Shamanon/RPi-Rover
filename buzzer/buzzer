@@ -9,8 +9,7 @@ from gpiozero import TonalBuzzer
 from gpiozero.tones import Tone
 from time import sleep
 import argparse
-import sys
-import signal
+import signal, sys
 import os.path
 
 tones_folder = '/robot/etc/tones/'
@@ -43,8 +42,7 @@ sys.path.append(args.f)
 if(os.path.exists(args.f+args.filename+'.py')):
 	music = __import__(args.filename)
 else:
-	print("File "+args.f+args.filename+".py not found. Exiting.")
-	exit(0)
+	exit("File "+args.f+args.filename+".py not found. Exiting.")
 
 if(args.n > 0):
 	notes = args.n
@@ -55,8 +53,7 @@ b = TonalBuzzer(20,octaves=3)
 
 #This will capture exit when using Ctrl-C
 def handle_ctrl_c(signal, frame):
-	print('\b\bGoodbye.')
-	sys.exit(130)
+	sys.exit(0)
  
 signal.signal(signal.SIGINT, handle_ctrl_c)
 
